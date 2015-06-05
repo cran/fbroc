@@ -14,33 +14,50 @@
 #'   Default to TRUE. Non-stratified bootstrap is not yet implemented.
 #' @param n.boot A number that will be coerced to integer. Specified the 
 #'   number of bootstrap replicates. Defaults to 1000.
+#' @param use.cache If true the bootstrapping results for the
+#'   ROC curve will be pre-cached. This increases speed when the object is used often, but also
+#'   takes up more memory.
+#' @param tie.strategy How to handle ties. See details below.
 #' @return A list of class \code{fbroc.roc}, containing the elements:
 #' \item{prediction}{Input predictions.}
 #' \item{true.class}{Input classes.}
-#' \item{thresholds}{Thresholds.}
+#' \item{roc}{A data.frame containing the thresholds of the ROC curve and the TPR and FPR at these
+#' thresholds.}
 #' \item{n.thresholds}{Number of thresholds.}
 #' \item{n.boot}{Number of bootstrap replicates.}
+#' \item{use.cache}{Indicates if cache is used for this ROC object}
 #' \item{n.pos}{Number of positive observations.}
 #' \item{n.neg}{Number of negative observations.}
-#' \item{tpr.fpr}{Vector containing true and false positive rates at
-#'                      the different thresholds for the original predictions.}
-#' \item{tpr.fpr.raw}{Vector containing raw results from C++ for later usage by
-#'  other functions.}       
-#' \item{time.used}{Time in seconds used for the bootstrap. Other steps are not
-#' included.}
 #' \item{auc}{The AUC of the original ROC curve.}
-#' \item{tpr.fpr.boot.matrix}{Matrix containing TPR and FPR values at the
-#' thresholds for each bootstrap replicate.}
+#' \item{boot.tpr}{If the cache is enabled, a matrix containing the bootstrapped TPR at the thresholds.}
+#' \item{boot.fpr}{If the cache is enabled, a matrix containing the bootstrapped FPR at the thresholds.}
+#' @section Caching:
+#' If you enable caching, \code{boot.roc} calculates the requested number of bootstrap samples and
+#' saves the TPR and FPR values for each iteration. This can take up a sizable portion of memory,
+#' but it speeds up subsequent operations. This can be useful if you plan to use the ROC curve
+#' multiple \code{fbroc} functions.
+#' @section Ties:
+#' You can set this parameter to either 1 or 2. If your numerical predictor has no ties, both settings
+#' will produce the same results. 
+#' If you set \code{tie.strategy} to 1 the ROC curve is built by connecting the TPR/FPR pairs for
+#' neighboring thresholds. A tie.strategy of 2 indicates that the TPR calculated at a specific FPR
+#' is the best TPR at a FPR smaller than or equal than the FPR specified. Defaults to 2.
 #' @examples
 #' y <- rep(c(TRUE, FALSE), each = 500)
 #' x <- rnorm(1000) + y
 #' result.boot <- boot.roc(x, y)
-#' @seealso \code{\link{plot.fbroc.roc}}, \code{\link{print.fbroc.roc}}
+#' @seealso \url{http://www.epeter-stats.de/roc-curves-and-ties/}, \code{\link{plot.fbroc.roc}}, 
+#' \code{\link{print.fbroc.roc}}
+#' 
 #' @export
-boot.roc <- function(pred, true.class, stratify = TRUE, n.boot = 1000) {
+boot.roc <- function(pred, true.class, stratify = TRUE, n.boot = 1000,
+                     use.cache = FALSE, tie.strategy = NULL) {
   # validate input
   if ((length(pred) != length(true.class)))
     stop("Predictions and true classes need to have the same length")
+  if (class(pred) == "integer") {
+    pred <- as.numeric(pred)
+  }
   if ((class(pred) != "numeric"))
     stop("Predictions must be numeric")
   if ((class(true.class) != "logical"))
@@ -57,7 +74,12 @@ boot.roc <- function(pred, true.class, stratify = TRUE, n.boot = 1000) {
     true.class <- true.class[!index.na]
     pred <- pred[!index.na]
   }
+  if (is.null(tie.strategy)) {
+    if (length(pred) == length(unique(pred))) tie.strategy <- 1 
+    else tie.strategy <- 2
+  }
   
+  if (!(tie.strategy %in% 1:2)) stop("tie.strategy must be 1 or 2")
   if (sum(true.class) == 0)
     stop("No positive observations are included")
   if (sum(!true.class) == 0)
@@ -73,37 +95,38 @@ boot.roc <- function(pred, true.class, stratify = TRUE, n.boot = 1000) {
   
   if (!stratify) stop("Non-stratified bootstrapping is not yet supported")
   
-  thresholds <- calculate.thresholds(pred, true.class)
-  n.thresholds <- length(thresholds)  
-  # Let C++ do the actual work
-  bench <- system.time(tpr.fpr.boot <- 
-                         tpr_fpr_boot(pred, as.integer(true.class),
-                                      thresholds, n.boot))[1]
-  column.names <- paste(rep(c("TPR.AT.T", "FPR.AT.T"), each = n.thresholds),
-                        rep(1:n.thresholds, 2), sep = "")
-  colnames(tpr.fpr.boot) <- column.names
+  new.order <- order(pred)
+  pred <- pred[new.order]
+  true.class <- true.class[new.order]
+  true.int <- as.integer(true.class)
+
+  original.roc <- roc_analysis(pred, true.int)
+  auc <- original.roc[[4]]
+  original.roc[[4]] <- NULL
+  original.roc <- as.data.frame(original.roc)
+  names(original.roc) <- c("TPR", "FPR", "threshold")
+  if (use.cache) {
+    booted.roc <- tpr_fpr_boot2(pred, true.int, n.boot)
+    boot.tpr <- booted.roc[[1]]
+    boot.fpr <- booted.roc[[2]]
+    rm(booted.roc)
+  } else {
+    boot.tpr <- NULL
+    boot.fpr <- NULL
+  }
   
-  bench <- round(bench, 1)
-  tpr.fpr <- true_tpr_fpr(pred, as.integer(true.class), thresholds)
-  tpr.fpr.raw <- tpr.fpr
-  auc <- get_auc(tpr.fpr)
-  tpr.fpr <- data.frame(TPR = tpr.fpr[1:n.thresholds],
-                        FPR = tpr.fpr[(n.thresholds + 1):(2 * n.thresholds)])
-  
-  
-  # prepare output
   output <- list(predictions = pred,
                  true.classes = true.class,
-                 thresholds = thresholds,
-                 n.thresholds = n.thresholds,
-                 n.boot = n.boot,
+                 n.thresholds = nrow(original.roc),
+                 n.boot = as.integer(n.boot),
+                 use.cache = use.cache,
+                 tie.strategy = tie.strategy,
                  n.pos = sum(true.class),
                  n.neg = sum(!true.class),
-                 tpr.fpr = tpr.fpr,
-                 tpr.fpr.raw = tpr.fpr.raw,
-                 time.used = bench,
+                 roc = original.roc,
                  auc = auc,
-                 tpr.fpr.boot.matrix = tpr.fpr.boot)  
+                 boot.tpr = boot.tpr,
+                 boot.fpr = boot.fpr)
   class(output) <- append(class(output), "fbroc.roc")
   return(output)
 }
@@ -119,17 +142,24 @@ boot.roc <- function(pred, true.class, stratify = TRUE, n.boot = 1000) {
 #' @param conf.level Confidence level to be used for the confidence intervals.
 #' @param steps Number of discrete steps for the FPR at which the TPR is 
 #' calculated. TPR confidence intervals are given for all FPRs in 
-#' \code{seq(0, 1, by = (1 / steps))}.
+#' \code{seq(0, 1, by = (1 / steps))}. Defaults to \code{max(roc$n.neg, 100)}.
 #' @return A data.frame containing the FPR steps and the lower and upper bounds
 #' of the confidence interval for the TPR.
 #' @export
 #' @seealso \code{\link{boot.roc}}
-conf.roc <- function(roc, conf.level = 0.95, steps = 100) {
+conf.roc <- function(roc, conf.level = 0.95, steps = max(roc$n.neg, 100)) {
   alpha <- 0.5*(1 - conf.level)
   alpha.levels <- c(alpha, 1 - alpha) 
   steps = as.integer(steps)
   # translate tpr_fpr at threshold matrix into tpr at fpr matrix
-  rel.matrix <- get_tpr_matrix(roc$tpr.fpr.boot.matrix, steps)
+  if (roc$use.cache) {
+    rel.matrix <- tpr_at_fpr_cached(roc$boot.tpr, roc$boot.fpr, roc$n.thresholds, steps)
+  } else {
+    rel.matrix <- tpr_at_fpr_uncached(roc$predictions,
+                                      as.integer(roc$true.classes),
+                                      roc$n.boot,
+                                      steps)
+  }
   rm(roc)
   conf.area <- t(apply(rel.matrix, 2, quantile, alpha.levels))
   conf.area <- as.data.frame(conf.area)
@@ -140,53 +170,29 @@ conf.roc <- function(roc, conf.level = 0.95, steps = 100) {
 
 #' Process bootstrapped TPR/FPR at thresholds matrix into TPR at FPR matrix
 #' 
-#' Function \code{boot.roc} contains the TPR and FPR result at each threshold
-#' per bootstrap replicate. This is easy to calculate, but often not convenient
-#' to work with. Therefore \code{boot.tpr.at.fpr} transform that matrix
-#' so that in each column are the bootstrap results for the TPR at a specific
-#' FPR.
+#' Usually \code{fbroc} calculates the TPR and FPR at the thresholds of the ROC curve.
+#' per bootstrap replicate. This can be calculated quickly, but is often not convenient
+#' to work with. Therefore \code{boot.tpr.at.fpr} instead gets the TPR along a sequence
+#' of different values for the FPR.
 #' @param roc Object of class \code{fbroc.roc}.
 #' @param steps Number of discrete steps for the FPR at which the TPR is 
 #' calculated. TPR confidence intervals are given for all FPRs in 
-#' \code{seq(0, 1, by = (1 / steps))}.
+#' \code{seq(0, 1, by = (1 / steps))}. Defaults to \code{n.neg}, thus covering all possible values.
 #' @return Matrix containing the TPR bootstrap replicates for the discrete
 #' FPR steps.
 #' @export
 #' @seealso \code{\link{boot.roc}}
-boot.tpr.at.fpr <- function(roc, steps) {
+boot.tpr.at.fpr <- function(roc, steps = roc$n.neg) {
   steps = as.integer(steps)
-  rel.matrix <- get_tpr_matrix(roc$tpr.fpr.boot.matrix, steps)
-  FPR.VEC = round(1 - seq(0, 1, by = (1 / steps),3))
+  if (roc$use.cache) {
+    rel.matrix <- tpr_at_fpr_cached(roc$boot.tpr, roc$boot.fpr, roc$n.thresholds, steps)
+  } else {
+    rel.matrix <- tpr_at_fpr_uncached(roc$predictions,
+                                      as.integer(roc$true.classes),
+                                      roc$n.boot,
+                                      steps)
+  }
+  FPR.VEC = round(1 - seq(0, 1, by = (1 / steps)), 3)
   colnames(rel.matrix) <- paste("TPR.AT.FPR.", FPR.VEC, sep = "")
   return(rel.matrix)
-}
-
-#' Calculates ROC curve thresholds
-#' 
-#' \code{calculate.thresholds} calculates the thresholds of the ROC curve
-#' at which the curve changes directions. 
-#' 
-#' @param pred A numeric vector. Contains predictions. \code{calculate.thresholds} 
-#'   assumes that a high prediction is evidence for the observation belonging 
-#'   to the positive class.
-#' @param true.class A logical vector. TRUE indicates the sample belonging to the
-#'   positive class.
-#' @return A numeric vector containing the thresholds. The length of the vector
-#'   depends on the data. The number of thresholds tends to go down as the
-#'   performance of the clasifier improves.   
-#' 
-#' @examples
-#' x <- 1:10
-#' y <- c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE)
-#' calculate.thresholds(x, y) # relevant thresholds are 1, 4, 5, 7, 11
-#' 
-#' @export
-calculate.thresholds <- function(pred, true.class) {
-  pred <- c(pred, max(pred) + 1) # add one threshold since we use >
-  index <- order(pred)
-  pred <- pred[index]
-  true.class <- true.class[index]
-  is.threshold <- find_thresholds(pred, true.class) # use C++ to find thresholds
-  thresholds <- pred[as.logical(is.threshold)]
-  return(thresholds)
 }

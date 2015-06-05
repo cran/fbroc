@@ -14,11 +14,11 @@ print.fbroc.perf <- function(x, ...) {
                 Bootstrapped ROC performance metric", "\n", "\n",
                 "Metric: ", x$metric, "\n",
                 "Bootstrap replicates: ", x$n.boot, "\n", 
-                "Estimate: ", round(x$Observed.Performance, 2), "\n",
+                "Observed: ", round(x$Observed.Performance, 3), "\n",
                 "Std. Error: ", round(sd(x$boot.results), 3), "\n", 
                 conf.level,"% confidence interval:", "\n",
-                round(x$CI.Performance[1], 2)," ",
-                round(x$CI.Performance[2], 2), "\n", "\n",
+                round(x$CI.Performance[1], 3)," ",
+                round(x$CI.Performance[2], 3), "\n", "\n",
                 sep = "")
   cat(text)
   invisible(text)
@@ -37,12 +37,13 @@ print.fbroc.perf <- function(x, ...) {
 #' @export
 print.fbroc.roc <- function(x, ...) {
   x.mem <- round(as.numeric(object.size(x))/(1024*1024),0)
+  adj <- ifelse(x$use.cache, "cached", "uncached")
+  time <- ifelse(x$use.cache, "have been", "will be")
   text <- cat(paste("\n",
-              "Bootstraped ROC Curve with ", x$n.pos, " positive and ", x$n.neg,
+              "Bootstraped ",adj," ROC Curve with ", x$n.pos, " positive and ", x$n.neg,
             " negative samples. \n \n", "The AUC is ", round(x$auc, 2),".\n \n", 
-            x$n.boot, " bootstrap samples have been calculated. \n", "The calculation took ", x$time.used, 
-            " seconds and the results use up ", x.mem, " MB of memory.", 
-            "\n", "\n", sep = ""))
+            x$n.boot, " bootstrap samples ",time," calculated. \n",  "The results use up ", x.mem, 
+            " MB of memory.", "\n", "\n", sep = ""))
   cat(text)
   invisible(text)
 }
@@ -62,7 +63,7 @@ print.fbroc.roc <- function(x, ...) {
 #' @param show.metric Character specifying which metric to display. See 
 #' \code{\link{perf.roc}} for details. Defaults to \code{NULL}, which means
 #' that no metric is displayed.
-#' @param ... further arguments passed to or from other methods.
+#' @param ... further arguments passed to \code{\link{perf.roc}}.
 #' @return A ggplot, so that the user can customize the plot further.
 #' @examples
 #' y <- rep(c(TRUE, FALSE), each = 500)
@@ -74,9 +75,18 @@ print.fbroc.roc <- function(x, ...) {
 plot.fbroc.roc <- function(x, col = "blue", fill = "royalblue1", print.plot = TRUE,
                            show.conf = TRUE, conf.level = 0.95, 
                            show.metric = NULL, ...) {
-  plot.frame = x$tpr.fpr
-  
-  roc.plot <- ggplot(data = plot.frame, aes(x = FPR, y = TPR)) +               
+  plot.frame = x$roc
+  if (x$tie.strategy == 2) {
+
+    expand.roc <- add_roc_points(x$roc$TPR, x$roc$FPR)
+    plot.frame <- data.frame(TPR = expand.roc[[1]],
+                             FPR = expand.roc[[2]],
+                             Segment = expand.roc[[3]])
+  } else {
+    plot.frame = x$roc
+    plot.frame$Segment = 1
+  }
+  roc.plot <- ggplot(data = plot.frame, aes(x = FPR, y = TPR, group = Segment)) +               
     ggtitle("ROC Curve") + xlab("False Positive Rate") +
     ylab("True Positive Rate") + theme_bw() +
     theme(title = element_text(size = 22),
@@ -86,20 +96,34 @@ plot.fbroc.roc <- function(x, col = "blue", fill = "royalblue1", print.plot = TR
           axis.text.y = element_text(size = 16))
   
   if (show.conf) {
-    conf.frame <- conf.roc(x, conf.level = conf.level, steps = 2000)
+    conf.frame <- conf.roc(x, conf.level = conf.level)
+    conf.frame$Segment <- 1
     roc.plot <- roc.plot + 
       geom_ribbon(data = conf.frame, fill = fill, alpha = 0.5,
                   aes(y = NULL, ymin = Lower.TPR, ymax = Upper.TPR))
   }
   if (!is.null(show.metric)) {
-    perf <- perf.roc(x, metric = show.metric, conf.level = conf.level)
-    perf.text <- paste("AUC = ", round(perf$Observed.Performance, 2)," [",
+    perf <- perf.roc(x, metric = show.metric, conf.level = conf.level, ...)
+    perf.text <- paste(perf$metric ," = " , round(perf$Observed.Performance, 2)," [",
                        round(perf$CI.Performance[1], 2), ",",
                        round(perf$CI.Performance[2], 2), "]", sep = "")
-    if (show.metric == "auc") {
-      text.frame <- data.frame(text.c = perf.text, TPR = 0.5, FPR = 0.68)
-      roc.plot <- roc.plot + geom_text(size = 8, aes(label = text.c), data = text.frame)
+    if (show.metric == "tpr") {
+      extra.frame <- data.frame(FPR = perf$params, TPR = perf$Observed.Performance, Segment = 1,
+                                lower = perf$CI.Performance[1], upper = perf$CI.Performance[2])
+      roc.plot <- roc.plot + geom_errorbar(data = extra.frame, width = 0.02, size = 1.25,
+                                             aes(ymin = lower, ymax = upper)) + 
+                                             geom_point(data = extra.frame, size = 4)
     }
+    if (show.metric == "fpr") {
+      extra.frame <- data.frame(TPR = perf$params, FPR = perf$Observed.Performance, Segment = 1,
+                                lower = perf$CI.Performance[1], upper = perf$CI.Performance[2])
+      roc.plot <- roc.plot + geom_errorbarh(data = extra.frame, height = 0.02, size = 1.25,
+                                           aes(xmin = lower, xmax = upper)) +
+                                           geom_point(data = extra.frame, size = 4)
+    }
+    text.frame <- data.frame(text.c = perf.text, TPR = 0.5, FPR = 0.68, Segment = 1)
+    roc.plot <- roc.plot + geom_text(size = 8, aes(label = text.c), data = text.frame)
+    
   }
   roc.plot <- roc.plot + geom_path(size = 1.1, col = col)
   if (print.plot) print(roc.plot)
@@ -113,8 +137,8 @@ plot.fbroc.roc <- function(x, col = "blue", fill = "royalblue1", print.plot = TR
 #' default.
 #' 
 #' @param x Object of class \code{perf.roc} to be plotted.
-#' @param bins Number of bins for histogram. Defaults to between 20 and 60
-#' depending on number of bootstrap replicates.
+#' @param bins Number of bins for histogram. Default value depends on the number of bootstrap
+#' values and the number of unique bootstrap performance values. 
 #' @param col Color of outline of histogram bars. Defaults to white.
 #' @param fill Fill of histogram bars. Defaults to lightblue.
 #' @param print.plot Logical specifying whether the plot should be printed.
@@ -141,8 +165,13 @@ plot.fbroc.perf <- function(x, bins = NULL, col = "white",
     bins <- floor(x$n.boot/200)
     bins <- max(bins, 20)
     bins <- min(bins, 60)
+    bw.min <- 0.99999*min(diff(sort(unique(boot.frame$Metric))))
+    bw = round(diff(range(x$boot.results))/bins, 6)
+    if ((bw < bw.min) | (5*bw.min > bw)) bw <- bw.min
+
   }
-  bw = round(diff(range(x$boot.results))/bins, 6)
+  else bw = round(diff(range(x$boot.results))/bins, 6)
+  
   perf.plot <- ggplot(data = boot.frame, aes(x = Metric)) + 
                xlab(toupper(x$metric)) + ylab("Density") + 
                ggtitle("Performance histogram") +

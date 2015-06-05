@@ -5,8 +5,8 @@
 #' algorithm where the cost of a single bootstrap replicate is \eqn{O(n)}, with 
 #' n denoting the number of observations. The algorithm is implemented in C++ to further
 #' increase the efficiency. Currently 100000 bootstrap iterations for 500
-#' observations take about one second. The ROC curve as used shows the dependency
-#' of the True Positive Rate (TPR) as a function of the False Positive Rate (FPR).
+#' observations take about one second. The ROC curve as used shows
+#' the True Positive Rate (TPR) as a function of the False Positive Rate (FPR).
 #' 
 #' @section Important fbroc functions:
 #' \describe{
@@ -18,6 +18,10 @@
 #' threshold matrix into a matrix containing bootstrapped TPRs at a range of
 #' different FPRs.}
 #' }
+#' @section Example Data:
+#' fbroc also contains the example data set \link{roc.examples}, 
+#' which you can use to test the functionality of the
+#' package. This data set contains simulated data and not an real application.
 #' @section Details:
 #' The algorithm works by first determining the critical thresholds of the ROC
 #' curve - cutoffs at which the curve changes directions. Each observation is then linked
@@ -30,17 +34,17 @@
 #' \cr \cr
 #' All bootstrap confidence interval are based on the percentile method.
 #' @section Notes:
-#' Package \code{fbroc} is still in an early stage. It will support
-#' more performance metrics based on ROC curves such as TPR at a fixed FPR and
-#' partial AUC in the future. In addition, support for paired ROC curves and more
-#' sophisticated bootstrap confidence interval calculation will be added.
+#' Package \code{fbroc} is still in an early development stage. Currently it supports bootstrapping
+#' the confidence region of the ROC curve, as well as the AUC, the FPR at a fixed TPR and vice versa.
+#' In addition, support for paired ROC curves and more sophisticated bootstrap confidence interval 
+#' calculation will be added at a later time.
 #' @examples
-#' y <- rep(c(TRUE, FALSE), each = 500)
-#' x <- rnorm(1000) + y
-#' result.boot <- boot.roc(x, y, n.boot = 100)
+#' data(roc.examples)
+#' result.boot <- boot.roc(roc.examples$Cont.Pred, roc.examples$True.Class, n.boot = 100)
 #' plot(result.boot)
 #' perf.roc(result.boot, "auc")
 #' perf.roc(result.boot, "auc", conf.level = 0.99)
+#' perf.roc(result.boot, "tpr", conf.level = 0.95, fpr = 0.1)
 #' @references Efron, B., & Tibshirani, R. (1998). \emph{An introduction to the bootstrap.}
 #' Boca Raton, Fla: Chapman & Hall/CRC. 
 #' @useDynLib fbroc
@@ -57,7 +61,7 @@ NULL
 
 
 # hack recommend by Hadley Wickham to make CMD check issue no notes
-globalVariables(c("TPR", "FPR", "text.c", "Lower.TPR", "Upper.TPR",
-                  "Metric", "y.dummy", "..density.."))
+globalVariables(c("TPR", "FPR", "text.c", "Lower.TPR", "Upper.TPR", "lower", "upper",
+                  "Metric", "y.dummy", "..density..", "Segment"))
 
 
