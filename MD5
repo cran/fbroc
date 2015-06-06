@@ -1,9 +1,9 @@
-e80b4549d95814fb7845326e252cf355 *DESCRIPTION
+2a926dc8507b4542a712a2a881746b0e *DESCRIPTION
 a7e7e0a6eaaf0adc4618049e20f4dd1c *NAMESPACE
 8bbbb4610c707a8a75c93bcb0462e762 *R/RcppExports.R
 71bc0076a952171120a9cffd9a73f3f0 *R/fbroc.R
 89a8b59487d56cacbf69b897034566bf *R/fbroc.data.doc.R
-93762e149e4930386893fc7caed22922 *R/fbroc.methods.R
+0dfcba54f7799de43f59010409c20bea *R/fbroc.methods.R
 dcd3a9621e4b4099a8a243dd27aa8ccf *R/fbroc.perf.R
 374b4a24a57e31bbc539de189ee93e09 *R/fbroc.roc.R
 494966f4b585b508dfaa0a63a101c9dc *README.md
@@ -30,7 +30,7 @@ d74b863434a3cb99be7f85c3ba03bc19 *src/interface.common.h
 739553c2425108eff0b82b34890b15ff *src/paired.roc.h
 5cf34bb6b745b5c03e7429c9e7cb8e00 *src/performance.cpp
 5e8d98dffca78ecbb1bf28b1b4d1dee8 *src/performance.h
-119a8254bafa1adb89b038805b40e111 *src/roc.cpp
+3ac128e52acf623640b3a8be6f25ddf1 *src/roc.cpp
 a7d7f7e564d2b8d67da43d66fcd91e1c *src/roc.h
 506ec8d10755e73d345bfbed6c49586b *src/sampler.cpp
 6ec9d7bd68ec7301f703b215fb1803d3 *src/sampler.h
