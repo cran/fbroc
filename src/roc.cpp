@@ -53,14 +53,95 @@ t extract(const t & in, const IntegerVector & index) {
   return out;
 } 
 
-// [[Rcpp::export]]
-NumericVector test_sort(NumericVector input) {
-  IntegerVector order = cpp_order(input);
-  NumericVector out = extract(input, order);
-  return out;
+IntegerVector ROC::build_index(NumericVector pred)
+{
+  IntegerVector index(pred.size());
+  // sort pred first
+  IntegerVector order = cpp_order(pred);
+  pred = extract<NumericVector>(pred, order);
+  for (int i = 0; i < pred.size(); i++) {
+    int j = 0;
+    while (pred[i] >= thresholds[j]) j++;
+    index[i] = j;
+  }
+  // now resort index
+  IntegerVector old_order = cpp_order(order);
+  index = extract<IntegerVector>(index, old_order);
+  return index;
+}
+
+
+void ROC::find_thresholds(NumericVector pred, IntegerVector true_class) {
+  LogicalVector is_threshold (n);
+  is_threshold[0] = true;
+  bool seen_pos = false;
+  bool seen_neg = false;
+  n_thresholds = 1;
+  double last_threshold = pred[0] - 1.;
+  // sort pred and true_class by pred first
+  IntegerVector order = cpp_order(pred);
+  pred = extract<NumericVector>(pred, order);
+  true_class = extract<IntegerVector>(true_class, order);
+  
+  for (int i = 0; i < n; i++) { 
+    if (true_class[i] == 1) seen_pos = true;
+    else seen_neg = true;
+    if (seen_pos && seen_neg && pred[i] != last_threshold) {
+      is_threshold[i] = true;
+      n_thresholds++;
+      last_threshold = pred[i];
+      if (true_class[i] == 1) seen_neg = false;
+      else seen_pos = false;
+    }
+  }
+  NumericVector thres (n_thresholds + 1);
+  int j = 0;
+  for (int i = 0; i < n; i++) {
+    if (is_threshold[i]) {
+      thres[j++] = pred[i];  
+    }
+  }
+  thres[n_thresholds++] = pred[n - 1] + 1.;
+  thresholds = thres;
 }
 
 // begin of class ROC
+
+NumericVector ROC::get_fpr_at_tpr(NumericVector &steps) const// return FPR at TPR
+{
+  
+  int n_steps = steps.size();
+  int n_thres = tpr.size();
+  NumericVector fpr_vec (n_steps);
+  int j = n_thres - 1;
+  
+  for (int i = n_steps - 1; i >= 0; i--) {
+    while ((j > 0) && (tpr[j] < steps[i])) {
+      j--;
+    }
+    fpr_vec[i] = fpr[j];
+  }
+  
+  return fpr_vec;
+}
+
+NumericVector ROC::get_fpr_at_tpr(NumericVector &tpr_in, NumericVector &fpr_in, NumericVector &steps)
+{
+  
+  int n_steps = steps.size();
+  int n_thres = tpr_in.size();
+  NumericVector fpr_vec (n_steps);
+  int j = n_thres - 1;
+  
+  for (int i = n_steps - 1; i >= 0; i--) {
+    while ((j > 0) && (tpr_in[j] < steps[i])) {
+      j--;
+    }
+    fpr_vec[i] = fpr_in[j];
+  }
+  
+  return fpr_vec;
+}
 
 NumericVector ROC::get_tpr_at_fpr(NumericVector &tpr_in, NumericVector &fpr_in, NumericVector &steps)
 {
@@ -171,18 +252,6 @@ NumericVector & ROC::get_fpr()
   return fpr;
 }
 
-
-IntegerVector ROC::build_index(NumericVector pred)
-{
-  IntegerVector index(pred.size());
-  for (int i = 0; i < pred.size(); i++) {
-    int j = 0;
-    while (pred[i] >= thresholds[j]) j++;
-    index[i] = j;
-  }
-  return index;
-}
-
 void ROC::build_pred(NumericVector pred, IntegerVector true_class)
 {
   pred_pos = NumericVector(n_pos);
@@ -193,36 +262,6 @@ void ROC::build_pred(NumericVector pred, IntegerVector true_class)
     if (true_class[i] == 1) pred_pos[index_pos++] = pred[i];
     else pred_neg[index_neg++] = pred[i];
   }
-}
-
-void ROC::find_thresholds(NumericVector pred, IntegerVector true_class) {
-  LogicalVector is_threshold (n);
-  is_threshold[0] = true;
-  bool seen_pos = false;
-  bool seen_neg = false;
-  n_thresholds = 1;
-  double last_threshold = pred[0] - 1.;
-  
-  for (int i = 0; i < n; i++) { 
-    if (true_class[i] == 1) seen_pos = true;
-      else seen_neg = true;
-    if (seen_pos && seen_neg && pred[i] != last_threshold) {
-      is_threshold[i] = true;
-      n_thresholds++;
-      last_threshold = pred[i];
-      if (true_class[i] == 1) seen_neg = false;
-        else seen_pos = false;
-    }
-  }
-  NumericVector thres (n_thresholds + 1);
-  int j = 0;
-  for (int i = 0; i < n; i++) {
-    if (is_threshold[i]) {
-      thres[j++] = pred[i];  
-    }
-  }
-  thres[n_thresholds++] = pred[n - 1] + 1.;
-  thresholds = thres;
 }
 
 int ROC::get_n_thres() const {

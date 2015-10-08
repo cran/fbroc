@@ -29,6 +29,20 @@ BEGIN_RCPP
     return __result;
 END_RCPP
 }
+// tpr_fpr_boot_paired
+List tpr_fpr_boot_paired(NumericVector pred1, NumericVector pred2, IntegerVector true_class, int n_boot);
+RcppExport SEXP fbroc_tpr_fpr_boot_paired(SEXP pred1SEXP, SEXP pred2SEXP, SEXP true_classSEXP, SEXP n_bootSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericVector >::type pred1(pred1SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pred2(pred2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type true_class(true_classSEXP);
+    Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
+    __result = Rcpp::wrap(tpr_fpr_boot_paired(pred1, pred2, true_class, n_boot));
+    return __result;
+END_RCPP
+}
 // paired_roc_analysis
 List paired_roc_analysis(NumericVector pred1, NumericVector pred2, IntegerVector true_class);
 RcppExport SEXP fbroc_paired_roc_analysis(SEXP pred1SEXP, SEXP pred2SEXP, SEXP true_classSEXP) {
@@ -42,16 +56,108 @@ BEGIN_RCPP
     return __result;
 END_RCPP
 }
-// tpr_fpr_boot2
-List tpr_fpr_boot2(NumericVector pred, IntegerVector true_class, int n_boot);
-RcppExport SEXP fbroc_tpr_fpr_boot2(SEXP predSEXP, SEXP true_classSEXP, SEXP n_bootSEXP) {
+// get_cached_perf_paired
+List get_cached_perf_paired(NumericMatrix tpr1, NumericMatrix fpr1, NumericMatrix tpr2, NumericMatrix fpr2, NumericVector param, int measure);
+RcppExport SEXP fbroc_get_cached_perf_paired(SEXP tpr1SEXP, SEXP fpr1SEXP, SEXP tpr2SEXP, SEXP fpr2SEXP, SEXP paramSEXP, SEXP measureSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericMatrix >::type tpr1(tpr1SEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type fpr1(fpr1SEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type tpr2(tpr2SEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type fpr2(fpr2SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type param(paramSEXP);
+    Rcpp::traits::input_parameter< int >::type measure(measureSEXP);
+    __result = Rcpp::wrap(get_cached_perf_paired(tpr1, fpr1, tpr2, fpr2, param, measure));
+    return __result;
+END_RCPP
+}
+// get_uncached_perf_paired
+List get_uncached_perf_paired(NumericVector pred1, NumericVector pred2, IntegerVector true_class, NumericVector param, int n_boot, int measure);
+RcppExport SEXP fbroc_get_uncached_perf_paired(SEXP pred1SEXP, SEXP pred2SEXP, SEXP true_classSEXP, SEXP paramSEXP, SEXP n_bootSEXP, SEXP measureSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericVector >::type pred1(pred1SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pred2(pred2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type true_class(true_classSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type param(paramSEXP);
+    Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
+    Rcpp::traits::input_parameter< int >::type measure(measureSEXP);
+    __result = Rcpp::wrap(get_uncached_perf_paired(pred1, pred2, true_class, param, n_boot, measure));
+    return __result;
+END_RCPP
+}
+// tpr_at_fpr_delta_uncached
+NumericMatrix tpr_at_fpr_delta_uncached(NumericVector pred1, NumericVector pred2, IntegerVector true_class, int n_boot, int n_steps);
+RcppExport SEXP fbroc_tpr_at_fpr_delta_uncached(SEXP pred1SEXP, SEXP pred2SEXP, SEXP true_classSEXP, SEXP n_bootSEXP, SEXP n_stepsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericVector >::type pred1(pred1SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pred2(pred2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type true_class(true_classSEXP);
+    Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
+    Rcpp::traits::input_parameter< int >::type n_steps(n_stepsSEXP);
+    __result = Rcpp::wrap(tpr_at_fpr_delta_uncached(pred1, pred2, true_class, n_boot, n_steps));
+    return __result;
+END_RCPP
+}
+// tpr_at_fpr_delta_cached
+NumericMatrix tpr_at_fpr_delta_cached(NumericMatrix tpr1, NumericMatrix fpr1, NumericMatrix tpr2, NumericMatrix fpr2, int n_steps);
+RcppExport SEXP fbroc_tpr_at_fpr_delta_cached(SEXP tpr1SEXP, SEXP fpr1SEXP, SEXP tpr2SEXP, SEXP fpr2SEXP, SEXP n_stepsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericMatrix >::type tpr1(tpr1SEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type fpr1(fpr1SEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type tpr2(tpr2SEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type fpr2(fpr2SEXP);
+    Rcpp::traits::input_parameter< int >::type n_steps(n_stepsSEXP);
+    __result = Rcpp::wrap(tpr_at_fpr_delta_cached(tpr1, fpr1, tpr2, fpr2, n_steps));
+    return __result;
+END_RCPP
+}
+// fpr_at_tpr_delta_cached
+NumericMatrix fpr_at_tpr_delta_cached(NumericMatrix tpr1, NumericMatrix fpr1, NumericMatrix tpr2, NumericMatrix fpr2, int n_steps);
+RcppExport SEXP fbroc_fpr_at_tpr_delta_cached(SEXP tpr1SEXP, SEXP fpr1SEXP, SEXP tpr2SEXP, SEXP fpr2SEXP, SEXP n_stepsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericMatrix >::type tpr1(tpr1SEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type fpr1(fpr1SEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type tpr2(tpr2SEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type fpr2(fpr2SEXP);
+    Rcpp::traits::input_parameter< int >::type n_steps(n_stepsSEXP);
+    __result = Rcpp::wrap(fpr_at_tpr_delta_cached(tpr1, fpr1, tpr2, fpr2, n_steps));
+    return __result;
+END_RCPP
+}
+// fpr_at_tpr_delta_uncached
+NumericMatrix fpr_at_tpr_delta_uncached(NumericVector pred1, NumericVector pred2, IntegerVector true_class, int n_boot, int n_steps);
+RcppExport SEXP fbroc_fpr_at_tpr_delta_uncached(SEXP pred1SEXP, SEXP pred2SEXP, SEXP true_classSEXP, SEXP n_bootSEXP, SEXP n_stepsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericVector >::type pred1(pred1SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pred2(pred2SEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type true_class(true_classSEXP);
+    Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
+    Rcpp::traits::input_parameter< int >::type n_steps(n_stepsSEXP);
+    __result = Rcpp::wrap(fpr_at_tpr_delta_uncached(pred1, pred2, true_class, n_boot, n_steps));
+    return __result;
+END_RCPP
+}
+// tpr_fpr_boot
+List tpr_fpr_boot(NumericVector pred, IntegerVector true_class, int n_boot);
+RcppExport SEXP fbroc_tpr_fpr_boot(SEXP predSEXP, SEXP true_classSEXP, SEXP n_bootSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< NumericVector >::type pred(predSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type true_class(true_classSEXP);
     Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
-    __result = Rcpp::wrap(tpr_fpr_boot2(pred, true_class, n_boot));
+    __result = Rcpp::wrap(tpr_fpr_boot(pred, true_class, n_boot));
     return __result;
 END_RCPP
 }
@@ -99,27 +205,42 @@ BEGIN_RCPP
 END_RCPP
 }
 // tpr_at_fpr_cached
-NumericMatrix tpr_at_fpr_cached(NumericMatrix tpr, NumericMatrix fpr, int n_thres, int n_steps);
-RcppExport SEXP fbroc_tpr_at_fpr_cached(SEXP tprSEXP, SEXP fprSEXP, SEXP n_thresSEXP, SEXP n_stepsSEXP) {
+NumericMatrix tpr_at_fpr_cached(NumericMatrix tpr, NumericMatrix fpr, int n_steps);
+RcppExport SEXP fbroc_tpr_at_fpr_cached(SEXP tprSEXP, SEXP fprSEXP, SEXP n_stepsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< NumericMatrix >::type tpr(tprSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type fpr(fprSEXP);
-    Rcpp::traits::input_parameter< int >::type n_thres(n_thresSEXP);
     Rcpp::traits::input_parameter< int >::type n_steps(n_stepsSEXP);
-    __result = Rcpp::wrap(tpr_at_fpr_cached(tpr, fpr, n_thres, n_steps));
+    __result = Rcpp::wrap(tpr_at_fpr_cached(tpr, fpr, n_steps));
     return __result;
 END_RCPP
 }
-// test_sort
-NumericVector test_sort(NumericVector input);
-RcppExport SEXP fbroc_test_sort(SEXP inputSEXP) {
+// fpr_at_tpr_cached
+NumericMatrix fpr_at_tpr_cached(NumericMatrix tpr, NumericMatrix fpr, int n_steps);
+RcppExport SEXP fbroc_fpr_at_tpr_cached(SEXP tprSEXP, SEXP fprSEXP, SEXP n_stepsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< NumericVector >::type input(inputSEXP);
-    __result = Rcpp::wrap(test_sort(input));
+    Rcpp::traits::input_parameter< NumericMatrix >::type tpr(tprSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type fpr(fprSEXP);
+    Rcpp::traits::input_parameter< int >::type n_steps(n_stepsSEXP);
+    __result = Rcpp::wrap(fpr_at_tpr_cached(tpr, fpr, n_steps));
+    return __result;
+END_RCPP
+}
+// fpr_at_tpr_uncached
+NumericMatrix fpr_at_tpr_uncached(NumericVector pred, IntegerVector true_class, int n_boot, int n_steps);
+RcppExport SEXP fbroc_fpr_at_tpr_uncached(SEXP predSEXP, SEXP true_classSEXP, SEXP n_bootSEXP, SEXP n_stepsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericVector >::type pred(predSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type true_class(true_classSEXP);
+    Rcpp::traits::input_parameter< int >::type n_boot(n_bootSEXP);
+    Rcpp::traits::input_parameter< int >::type n_steps(n_stepsSEXP);
+    __result = Rcpp::wrap(fpr_at_tpr_uncached(pred, true_class, n_boot, n_steps));
     return __result;
 END_RCPP
 }

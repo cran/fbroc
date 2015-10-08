@@ -1,10 +1,7 @@
-validate.single.numeric <- function(number, var.name) {
-  if (is.null(number)) stop(paste("Please pass ", var.name, " to perf.roc!", sep = ""))
-  if (class(number) != "numeric") stop(paste(var.name, " must be numeric!", sep = ""))
-  if (length(number) != 1) stop(paste(var.name, " must have length 1!", sep = ""))
-  if (is.na(number)) stop(paste(var.name, " is NA!", sep = ""))
-  if ((number < 0) | (number > 1)) stop(paste(var.name, " must be in [0, 1]!", sep = ""))
-  return(number)
+#' @export
+perf.roc <- function(roc, ...) {
+  .Deprecated("perf")
+  perf(roc, ...)
 }
 
 #' Calculate performance for bootstrapped ROC curve
@@ -19,6 +16,7 @@ validate.single.numeric <- function(number, var.name) {
 #' @param conf.level The confidence level of the confidence interval.
 #' @param fpr The fixed FPR at which the TPR is to be evaluated when \code{tpr} is selected as metric.
 #' @param tpr The fixed TPR at which the FPR is to be evaluated when \code{fpr} is selected as metric.
+#' @param ... Further arguments, that are not used at this time.
 #' @return A list of class \code{fbroc.perf}, containing the elements:
 #' \item{Observed.Performance}{The observed performance.}
 #' \item{CI.Performance}{Quantile based confidence interval for the performance.}
@@ -33,10 +31,11 @@ validate.single.numeric <- function(number, var.name) {
 #' y <- rep(c(TRUE, FALSE), each = 500)
 #' x <- rnorm(1000) + y
 #' result.boot <- boot.roc(x, y, n.boot = 100)
-#' perf.roc(result.boot, "auc")
-#' perf.roc(result.boot, "auc", conf.level = 0.99)
+#' perf(result.boot, "auc")
+#' perf(result.boot, "auc", conf.level = 0.99)
 #' @export
-perf.roc <- function(roc, metric = "auc", conf.level = 0.95, tpr = NULL, fpr = NULL) {
+perf.fbroc.roc <- function(roc, metric = "auc", conf.level = 0.95, tpr = NULL, fpr = NULL, ...) {
+
   # start with data validation
   if (!is(roc, "fbroc.roc"))
     stop("roc must be of class fbroc.roc")

@@ -4,11 +4,12 @@ using namespace Rcpp;
 #include "roc.h"
 #include "sampler.h"
 #include "bootstrapper.h"
-#include "performance.h"
 #include "interface.common.h"
+#include "performance.h"
+
 
 // [[Rcpp::export]]
-List tpr_fpr_boot2(NumericVector pred, IntegerVector true_class, int n_boot) {
+List tpr_fpr_boot(NumericVector pred, IntegerVector true_class, int n_boot) {
 
   Bootstrapped_ROC boot_roc (pred, true_class);
   int n_thres = boot_roc.get_n_thres();
@@ -22,14 +23,6 @@ List tpr_fpr_boot2(NumericVector pred, IntegerVector true_class, int n_boot) {
   List out(2);
   out[0] = tpr;
   out[1] = fpr;
-  return out;
-}
-
-PerfFun pick_measure(Measure measure) {
-  PerfFun out;
-  if (measure == AUC) out = &get_perf_auc; 
-  if (measure == TPR_AT_FPR) out = &get_tpr_at_fixed_fpr; 
-  if (measure == FPR_AT_TPR) out = &get_fpr_at_fixed_tpr; 
   return out;
 }
 
@@ -62,13 +55,6 @@ NumericVector get_cached_perf(NumericMatrix tpr, NumericMatrix fpr, NumericVecto
   return roc_perf;
 }
 
-NumericVector get_steps(int n_steps) {
-  double step_size = (1.0 / n_steps);
-  NumericVector steps (n_steps + 1);
-  for (int i = 0; i <= n_steps; i++) steps[i] = 1. - i * step_size;
-  return steps;
-}
-
 // [[Rcpp::export]]
 NumericMatrix tpr_at_fpr_uncached(NumericVector pred, IntegerVector true_class, int n_boot, int n_steps) {
   Bootstrapped_ROC boot_roc (pred, true_class);
@@ -82,7 +68,7 @@ NumericMatrix tpr_at_fpr_uncached(NumericVector pred, IntegerVector true_class, 
 }
 
 // [[Rcpp::export]]
-NumericMatrix tpr_at_fpr_cached(NumericMatrix tpr, NumericMatrix fpr, int n_thres, int n_steps) {
+NumericMatrix tpr_at_fpr_cached(NumericMatrix tpr, NumericMatrix fpr, int n_steps) {
   NumericVector steps = get_steps(n_steps);
   int n_boot = tpr.nrow();
   NumericMatrix tpr_matrix (n_boot, n_steps + 1);
@@ -93,3 +79,30 @@ NumericMatrix tpr_at_fpr_cached(NumericMatrix tpr, NumericMatrix fpr, int n_thre
   }
   return tpr_matrix;
 }
+
+// [[Rcpp::export]]
+NumericMatrix fpr_at_tpr_cached(NumericMatrix tpr, NumericMatrix fpr, int n_steps) {
+  NumericVector steps = get_steps(n_steps);
+  int n_boot = fpr.nrow();
+  NumericMatrix fpr_matrix (n_boot, n_steps + 1);
+  for (int j = 0; j < n_boot; j++) {
+    NumericVector tpr_v = tpr(j, _);
+    NumericVector fpr_v = fpr(j, _);
+    fpr_matrix(j, _) = ROC::get_fpr_at_tpr(tpr_v, fpr_v, steps);
+  }
+  return fpr_matrix;
+}
+
+// [[Rcpp::export]]
+NumericMatrix fpr_at_tpr_uncached(NumericVector pred, IntegerVector true_class, int n_boot, int n_steps) {
+  Bootstrapped_ROC boot_roc (pred, true_class);
+  NumericVector steps = get_steps(n_steps);
+  NumericMatrix fpr_matrix (n_boot, n_steps + 1);
+  for (int j = 0; j < n_boot; j++) { 
+    boot_roc.bootstrap();
+    fpr_matrix(j, _) = boot_roc.get_fpr_at_tpr(steps);
+  }
+  
+  return fpr_matrix;
+}
+

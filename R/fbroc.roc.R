@@ -26,6 +26,7 @@
 #' \item{n.thresholds}{Number of thresholds.}
 #' \item{n.boot}{Number of bootstrap replicates.}
 #' \item{use.cache}{Indicates if cache is used for this ROC object}
+#' \item{tie.strategy}{Used setting how to handle ties in predictors.}
 #' \item{n.pos}{Number of positive observations.}
 #' \item{n.neg}{Number of negative observations.}
 #' \item{auc}{The AUC of the original ROC curve.}
@@ -95,18 +96,13 @@ boot.roc <- function(pred, true.class, stratify = TRUE, n.boot = 1000,
   
   if (!stratify) stop("Non-stratified bootstrapping is not yet supported")
   
-  new.order <- order(pred)
-  pred <- pred[new.order]
-  true.class <- true.class[new.order]
   true.int <- as.integer(true.class)
 
   original.roc <- roc_analysis(pred, true.int)
   auc <- original.roc[[4]]
-  original.roc[[4]] <- NULL
-  original.roc <- as.data.frame(original.roc)
-  names(original.roc) <- c("TPR", "FPR", "threshold")
+  original.roc <- c.list.to.roc(original.roc)
   if (use.cache) {
-    booted.roc <- tpr_fpr_boot2(pred, true.int, n.boot)
+    booted.roc <- tpr_fpr_boot(pred, true.int, n.boot)
     boot.tpr <- booted.roc[[1]]
     boot.fpr <- booted.roc[[2]]
     rm(booted.roc)
@@ -132,39 +128,65 @@ boot.roc <- function(pred, true.class, stratify = TRUE, n.boot = 1000,
 }
 
 
-#' Generates confidence intervals for the TPR for a range of FPRs
+conf.roc <- function(roc, conf.level = 0.95, steps = 250) {
+  .Deprecated("conf")
+  perf(conf, conf.level = conf.level, steps = steps)
+}
+
+#' Generates confidence intervals for the TPR for a range of FPRs or vice versa
 #' 
-#' Calculates confidence intervals for the TPR at different FPR values. 
-#' This function is also used to plot the confidence regions in the
-#' function \code{\link{plot.fbroc.roc}}.
+#' Calculates confidence intervals for the TPR at different FPR values or vice versa. The stepsize
+#' at which the TPR or FPR is calculated can be set as needed.
 #' 
 #' @param roc Object of class \code{fbroc.roc}.
-#' @param conf.level Confidence level to be used for the confidence intervals.
-#' @param steps Number of discrete steps for the FPR at which the TPR is 
-#' calculated. TPR confidence intervals are given for all FPRs in 
-#' \code{seq(0, 1, by = (1 / steps))}. Defaults to \code{max(roc$n.neg, 100)}.
-#' @return A data.frame containing the FPR steps and the lower and upper bounds
-#' of the confidence interval for the TPR.
+#' @param conf.level Confidence level to be used for the confidence intervals. Defaults to 0.95.
+#' @param conf.for Use "tpr" to get confidence regions for the TPR at specific FPRs. Use "fpr"
+#' instead for confidence regions for the FPR at specific TPRs.
+#' @param steps Number of discrete steps at which the requested rate and the confidence region is calculated.
+#' Defaults to 250.
+#' @param ... Further arguments, that are not used at this time.
+#' @return A data.frame containing either discrete TPR steps and estimates and confidence bounds for
+#' FPR or vice versa, depending upon \code{conf.for}.
 #' @export
+#' @examples 
+#' data(roc.examples)
+#' example <- boot.roc(roc.examples$Cont.Pred, roc.examples$True.Class,
+#'                     n.boot = 100)
+#' conf(example, conf.for = "tpr", steps = 10) # get confidence regions for TPR at FPR
+#' conf(example, conf.for = "fpr", steps = 10) # get confidence regions for FPR at TPR
 #' @seealso \code{\link{boot.roc}}
-conf.roc <- function(roc, conf.level = 0.95, steps = max(roc$n.neg, 100)) {
+conf.fbroc.roc <- function(roc, conf.level = 0.95, conf.for = "tpr", steps = 250, ...) {
+  if (!(conf.for %in% c("tpr", "fpr"))) stop("Invalid rate given for confidence region")
   alpha <- 0.5*(1 - conf.level)
   alpha.levels <- c(alpha, 1 - alpha) 
   steps = as.integer(steps)
-  # translate tpr_fpr at threshold matrix into tpr at fpr matrix
-  if (roc$use.cache) {
-    rel.matrix <- tpr_at_fpr_cached(roc$boot.tpr, roc$boot.fpr, roc$n.thresholds, steps)
+  
+  if (conf.for == "tpr") {
+    cached.fun <- tpr_at_fpr_cached
+    uncached.fun <- tpr_at_fpr_uncached
+    frame.names <- c("FPR", "TPR", "Lower.TPR", "Upper.TPR")
   } else {
-    rel.matrix <- tpr_at_fpr_uncached(roc$predictions,
-                                      as.integer(roc$true.classes),
-                                      roc$n.boot,
-                                      steps)
+    cached.fun <- fpr_at_tpr_cached
+    uncached.fun <- fpr_at_tpr_uncached
+    frame.names <- c("TPR", "FPR", "Lower.FPR", "Upper.FPR")
   }
+  estimate <- cached.fun(matrix(roc$roc$TPR, nrow = 1), 
+                         matrix(roc$roc$FPR, nrow = 1), 
+                         steps)
+  if (roc$use.cache) {
+    rel.matrix <- cached.fun(roc$boot.tpr, roc$boot.fpr, steps)
+  } else {
+    rel.matrix <- uncached.fun(roc$predictions, roc$true.classes, roc$n.boot, steps)
+  }
+  
   rm(roc)
+  estimate <- data.frame(as.numeric(estimate))
   conf.area <- t(apply(rel.matrix, 2, quantile, alpha.levels))
   conf.area <- as.data.frame(conf.area)
-  names(conf.area) <- c("Lower.TPR", "Upper.TPR")
-  conf.area <- cbind(data.frame(FPR = 1 - seq(0, 1, by = (1 / steps))), conf.area)
+  conf.area <- cbind(estimate, conf.area)
+  conf.area <- cbind(data.frame(1 - seq(0, 1, by = (1 / steps))), conf.area)
+  names(conf.area) <- frame.names
+  class(conf.area) <- c("fbroc.conf", class(conf.area))
   return(conf.area)
 }
 
@@ -185,7 +207,7 @@ conf.roc <- function(roc, conf.level = 0.95, steps = max(roc$n.neg, 100)) {
 boot.tpr.at.fpr <- function(roc, steps = roc$n.neg) {
   steps = as.integer(steps)
   if (roc$use.cache) {
-    rel.matrix <- tpr_at_fpr_cached(roc$boot.tpr, roc$boot.fpr, roc$n.thresholds, steps)
+    rel.matrix <- tpr_at_fpr_cached(roc$boot.tpr, roc$boot.fpr, steps)
   } else {
     rel.matrix <- tpr_at_fpr_uncached(roc$predictions,
                                       as.integer(roc$true.classes),

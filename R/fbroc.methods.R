@@ -6,7 +6,7 @@
 #' @param x Object of class \code{fbroc.perf}.
 #' @param ... further arguments passed to or from other methods.
 #' @return Character containing the text that is also printed.
-#' @seealso \code{\link{perf.roc}}
+#' @seealso \code{\link{perf.fbroc.roc}}
 #' @export
 print.fbroc.perf <- function(x, ...) {
   conf.level <- round(100 * x$conf.level, 0)
@@ -59,23 +59,25 @@ print.fbroc.roc <- function(x, ...) {
 #' @param print.plot Logical specifying whether the plot should be printed.
 #' @param show.conf Logical specifying whether the confidence region should be
 #' plotted.
+#' @param steps Number of discrete steps for the FPR at which the TPR is 
+#' calculated. TPR confidence intervals are given for all FPRs in 
+#' \code{seq(0, 1, by = (1 / steps))}. Defaults to 250.
 #' @param conf.level Confidence level of the confidence region.
 #' @param show.metric Character specifying which metric to display. See 
-#' \code{\link{perf.roc}} for details. Defaults to \code{NULL}, which means
+#' \code{\link{perf.fbroc.roc}} for details. Defaults to \code{NULL}, which means
 #' that no metric is displayed.
-#' @param ... further arguments passed to \code{\link{perf.roc}}.
+#' @param ... further arguments passed to \code{\link{perf.fbroc.roc}}.
 #' @return A ggplot, so that the user can customize the plot further.
 #' @examples
 #' y <- rep(c(TRUE, FALSE), each = 500)
 #' x <- rnorm(1000) + y
 #' result.boot <- boot.roc(x, y, n.boot = 100)
 #' plot(result.boot)
-#' @seealso \code{\link{boot.roc}}, \code{\link{perf.roc}}
+#' @seealso \code{\link{boot.roc}}, \code{\link{perf.fbroc.roc}}
 #' @export
 plot.fbroc.roc <- function(x, col = "blue", fill = "royalblue1", print.plot = TRUE,
-                           show.conf = TRUE, conf.level = 0.95, 
+                           show.conf = TRUE, steps = 250, conf.level = 0.95, 
                            show.metric = NULL, ...) {
-  plot.frame = x$roc
   if (x$tie.strategy == 2) {
 
     expand.roc <- add_roc_points(x$roc$TPR, x$roc$FPR)
@@ -86,41 +88,19 @@ plot.fbroc.roc <- function(x, col = "blue", fill = "royalblue1", print.plot = TR
     plot.frame = x$roc
     plot.frame$Segment = 1
   }
-  roc.plot <- ggplot(data = plot.frame, aes(x = FPR, y = TPR)) +               
-    ggtitle("ROC Curve") + xlab("False Positive Rate") +
-    ylab("True Positive Rate") + theme_bw() +
-    theme(title = element_text(size = 22),
-          axis.title.x = element_text(size = 18),
-          axis.title.y = element_text(size = 18),
-          axis.text.x = element_text(size = 16),
-          axis.text.y = element_text(size = 16))
+  roc.plot <- fbroc.plot.base(plot.frame)
   
   if (show.conf) {
-    conf.frame <- conf.roc(x, conf.level = conf.level)
-    conf.frame$Segment <- 1
     roc.plot <- roc.plot + 
-      geom_ribbon(data = conf.frame, fill = fill, alpha = 0.5,
-                  aes(y = NULL, ymin = Lower.TPR, ymax = Upper.TPR))
+      fbroc.plot.add.conf(x, conf.level = conf.level, steps = steps, fill = fill)
   }
+  
   if (!is.null(show.metric)) {
-    perf <- perf.roc(x, metric = show.metric, conf.level = conf.level, ...)
+    perf <- perf(x, metric = show.metric, conf.level = conf.level)
     perf.text <- paste(perf$metric ," = " , round(perf$Observed.Performance, 2)," [",
                        round(perf$CI.Performance[1], 2), ",",
                        round(perf$CI.Performance[2], 2), "]", sep = "")
-    if (show.metric == "tpr") {
-      extra.frame <- data.frame(FPR = perf$params, TPR = perf$Observed.Performance, Segment = 1,
-                                lower = perf$CI.Performance[1], upper = perf$CI.Performance[2])
-      roc.plot <- roc.plot + geom_errorbar(data = extra.frame, width = 0.02, size = 1.25,
-                                             aes(ymin = lower, ymax = upper)) + 
-                                             geom_point(data = extra.frame, size = 4)
-    }
-    if (show.metric == "fpr") {
-      extra.frame <- data.frame(TPR = perf$params, FPR = perf$Observed.Performance, Segment = 1,
-                                lower = perf$CI.Performance[1], upper = perf$CI.Performance[2])
-      roc.plot <- roc.plot + geom_errorbarh(data = extra.frame, height = 0.02, size = 1.25,
-                                           aes(xmin = lower, xmax = upper)) +
-                                           geom_point(data = extra.frame, size = 4)
-    }
+    roc.plot <- roc.plot + fbroc.plot.add.metric(roc.plot, show.metric, perf, col)
     text.frame <- data.frame(text.c = perf.text, TPR = 0.5, FPR = 0.68, Segment = 1)
     roc.plot <- roc.plot + geom_text(size = 8, aes(label = text.c), data = text.frame)
     
@@ -132,11 +112,11 @@ plot.fbroc.roc <- function(x, col = "blue", fill = "royalblue1", print.plot = TR
 
 #' Plots ROC based performance metric as histogram
 #' 
-#' Given an object of class \code{perf.roc} this function plots the results of
-#' the bootstrap as an histogram. The confidence interval is also included by
+#' Given an object of class \code{fbroc.perf} this function plots the results of
+#' the bootstrap as a histogram. The confidence interval is also included by
 #' default.
 #' 
-#' @param x Object of class \code{perf.roc} to be plotted.
+#' @param x Object of class \code{fbroc.perf} to be plotted.
 #' @param bins Number of bins for histogram. Default value depends on the number of bootstrap
 #' values and the number of unique bootstrap performance values. 
 #' @param col Color of outline of histogram bars. Defaults to white.
@@ -148,12 +128,12 @@ plot.fbroc.roc <- function(x, col = "blue", fill = "royalblue1", print.plot = TR
 #' should also be displayed as text.
 #' @param ... Further arguments passed to or from other methods.
 #' @return A ggplot, so that the user can customize the plot further.
-#' @seealso \code{\link{perf.roc}}
+#' @seealso \code{\link{perf.fbroc.roc}}
 #' @examples
 #' y <- rep(c(TRUE, FALSE), each = 500)
 #' x <- rnorm(1000) + y
-#' result.boot <- boot.roc(x, y, n.boot = 10000)
-#' result.perf <- perf.roc(result.boot, "auc")
+#' result.boot <- boot.roc(x, y, n.boot = 1000)
+#' result.perf <- perf(result.boot, "auc")
 #' plot(result.perf)
 #' @export
 plot.fbroc.perf <- function(x, bins = NULL, col = "white", 
@@ -162,6 +142,7 @@ plot.fbroc.perf <- function(x, bins = NULL, col = "white",
   boot.frame <- data.frame(x$boot.results)
   names(boot.frame) <- "Metric"
   if (is.null(bins)) {
+    # Bin number heuristic
     bins <- floor(x$n.boot/200)
     bins <- max(bins, 20)
     bins <- min(bins, 60)
@@ -197,4 +178,60 @@ plot.fbroc.perf <- function(x, bins = NULL, col = "white",
   }
   if (print.plot) print(perf.plot)
   invisible(perf.plot)
+}
+
+
+#' Plots function for object of class{fbroc.conf}
+#' 
+#' Given an object of class \code{fbroc.conf} this function plots the contained estimates for 
+#' the confidence region of the ROC curve.
+#' 
+#' @param x Object of class \code{fbroc.conf} to be plotted.
+#' @param col Color of the curve to be drawn.
+#' @param fill Fill of the confidence region.
+#' @param print.plot Logical specifying whether the plot should be printed.
+#' @param ... Further arguments passed to or from other methods.
+#' @return A ggplot, so that the user can customize the plot further.
+#' @seealso \code{\link{conf.fbroc.roc}}
+#' @examples
+#' data(roc.examples)
+#' example <- boot.roc(roc.examples$Cont.Pred, roc.examples$True.Class, n.boot = 100)
+#' # Confidence regions for TPR at specific FPR values
+#' tpr.conf <- conf(example, conf.for = "tpr", steps = 50) 
+#' plot(tpr.conf)
+#' # Confidence regions for FPR at specific TPR values
+#' fpr.conf <- conf(example, conf.for = "fpr", steps = 50) 
+#' plot(fpr.conf) 
+#' @export
+plot.fbroc.conf <- function(x, col = "blue", fill = "royalblue1", print.plot = TRUE,...) {
+  if (names(x)[1] == "FPR") { # tpr over fpr
+    roc.plot <- ggplot(data = x, aes(x = FPR, y = TPR)) +               
+      ggtitle("ROC Curve") + xlab("False Positive Rate") +
+      ylab("True Positive Rate") + theme_bw() +
+      theme(title = element_text(size = 22),
+            axis.title.x = element_text(size = 18),
+            axis.title.y = element_text(size = 18),
+            axis.text.x = element_text(size = 16),
+            axis.text.y = element_text(size = 16))
+    #plot conf
+    roc.plot <- roc.plot + geom_ribbon(data = x, fill = fill, alpha = 0.5,
+                                       aes(y = NULL, ymin = Lower.TPR, ymax = Upper.TPR))
+  }
+  else { # Now the same plot for curve over tpr
+    roc.plot <- ggplot(data = x, aes(y = FPR, x = TPR)) +               
+      ggtitle("ROC Curve") + ylab("False Positive Rate") +
+      xlab("True Positive Rate") + theme_bw() +
+      theme(title = element_text(size = 22),
+            axis.title.x = element_text(size = 18),
+            axis.title.y = element_text(size = 18),
+            axis.text.x = element_text(size = 16),
+            axis.text.y = element_text(size = 16))
+    #plot conf
+    roc.plot <- roc.plot + geom_ribbon(data = x, fill = fill, alpha = 0.5,
+                                       aes(y = NULL, ymin = Lower.FPR, ymax = Upper.FPR))
+  }
+  roc.plot <- roc.plot + geom_path(size = 1.1, col = col) # plot estimate
+  
+  if (print.plot) print(roc.plot)
+  invisible(roc.plot)
 }

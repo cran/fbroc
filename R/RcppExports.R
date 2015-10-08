@@ -9,12 +9,40 @@ roc_analysis <- function(pred, true_class) {
     .Call('fbroc_roc_analysis', PACKAGE = 'fbroc', pred, true_class)
 }
 
+tpr_fpr_boot_paired <- function(pred1, pred2, true_class, n_boot) {
+    .Call('fbroc_tpr_fpr_boot_paired', PACKAGE = 'fbroc', pred1, pred2, true_class, n_boot)
+}
+
 paired_roc_analysis <- function(pred1, pred2, true_class) {
     .Call('fbroc_paired_roc_analysis', PACKAGE = 'fbroc', pred1, pred2, true_class)
 }
 
-tpr_fpr_boot2 <- function(pred, true_class, n_boot) {
-    .Call('fbroc_tpr_fpr_boot2', PACKAGE = 'fbroc', pred, true_class, n_boot)
+get_cached_perf_paired <- function(tpr1, fpr1, tpr2, fpr2, param, measure) {
+    .Call('fbroc_get_cached_perf_paired', PACKAGE = 'fbroc', tpr1, fpr1, tpr2, fpr2, param, measure)
+}
+
+get_uncached_perf_paired <- function(pred1, pred2, true_class, param, n_boot, measure) {
+    .Call('fbroc_get_uncached_perf_paired', PACKAGE = 'fbroc', pred1, pred2, true_class, param, n_boot, measure)
+}
+
+tpr_at_fpr_delta_uncached <- function(pred1, pred2, true_class, n_boot, n_steps) {
+    .Call('fbroc_tpr_at_fpr_delta_uncached', PACKAGE = 'fbroc', pred1, pred2, true_class, n_boot, n_steps)
+}
+
+tpr_at_fpr_delta_cached <- function(tpr1, fpr1, tpr2, fpr2, n_steps) {
+    .Call('fbroc_tpr_at_fpr_delta_cached', PACKAGE = 'fbroc', tpr1, fpr1, tpr2, fpr2, n_steps)
+}
+
+fpr_at_tpr_delta_cached <- function(tpr1, fpr1, tpr2, fpr2, n_steps) {
+    .Call('fbroc_fpr_at_tpr_delta_cached', PACKAGE = 'fbroc', tpr1, fpr1, tpr2, fpr2, n_steps)
+}
+
+fpr_at_tpr_delta_uncached <- function(pred1, pred2, true_class, n_boot, n_steps) {
+    .Call('fbroc_fpr_at_tpr_delta_uncached', PACKAGE = 'fbroc', pred1, pred2, true_class, n_boot, n_steps)
+}
+
+tpr_fpr_boot <- function(pred, true_class, n_boot) {
+    .Call('fbroc_tpr_fpr_boot', PACKAGE = 'fbroc', pred, true_class, n_boot)
 }
 
 get_uncached_perf <- function(pred, true_class, param, n_boot, measure) {
@@ -29,11 +57,15 @@ tpr_at_fpr_uncached <- function(pred, true_class, n_boot, n_steps) {
     .Call('fbroc_tpr_at_fpr_uncached', PACKAGE = 'fbroc', pred, true_class, n_boot, n_steps)
 }
 
-tpr_at_fpr_cached <- function(tpr, fpr, n_thres, n_steps) {
-    .Call('fbroc_tpr_at_fpr_cached', PACKAGE = 'fbroc', tpr, fpr, n_thres, n_steps)
+tpr_at_fpr_cached <- function(tpr, fpr, n_steps) {
+    .Call('fbroc_tpr_at_fpr_cached', PACKAGE = 'fbroc', tpr, fpr, n_steps)
 }
 
-test_sort <- function(input) {
-    .Call('fbroc_test_sort', PACKAGE = 'fbroc', input)
+fpr_at_tpr_cached <- function(tpr, fpr, n_steps) {
+    .Call('fbroc_fpr_at_tpr_cached', PACKAGE = 'fbroc', tpr, fpr, n_steps)
+}
+
+fpr_at_tpr_uncached <- function(pred, true_class, n_boot, n_steps) {
+    .Call('fbroc_fpr_at_tpr_uncached', PACKAGE = 'fbroc', pred, true_class, n_boot, n_steps)
 }
 
