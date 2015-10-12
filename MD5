@@ -1,10 +1,10 @@
-abe6ca581b5d866bec5e84efe2185eb7 *DESCRIPTION
+af6b2baef738d59398b0e74f4fa15212 *DESCRIPTION
 8df703ee1bd25194109e0a8d00950f3e *NAMESPACE
 993b1b33be3cc6b305ed341d85dac84a *R/RcppExports.R
 d63747e7d64d6ddfff9411e12bb547aa *R/fbroc.R
 89a8b59487d56cacbf69b897034566bf *R/fbroc.data.doc.R
 a6ff8aa4b978d0bcb374a7fa1721e42c *R/fbroc.helper.functions.R
-7d8be3063e1b2f5d93e17272db2c90e3 *R/fbroc.methods.R
+a1ac35670c4610680020710aa8e16cb1 *R/fbroc.methods.R
 35bad55cfd1535ee7147801984892510 *R/fbroc.paired.R
 d3e5523ff1dd4ed72c86f7552f801405 *R/fbroc.paired.methods.R
 65d7fd67a15db0066cec30b7df7b6a6e *R/fbroc.perf.R
@@ -28,7 +28,7 @@ cda8121e5e3c46fa2f0bb60447f9dd31 *man/plot.fbroc.conf.Rd
 6451cd1fc9c4422523cfa52eb953e4dc *man/plot.fbroc.paired.roc.Rd
 cf9fc9231a0e479c5e28f601ab18908d *man/plot.fbroc.perf.Rd
 328b0ce7b0c617814897567a2b48f061 *man/plot.fbroc.perf.paired.Rd
-8032a7a7f4a734d24d80d5118c90880a *man/plot.fbroc.roc.Rd
+cf1fc753bc58c6dbd5d77343e1492396 *man/plot.fbroc.roc.Rd
 13161fe97789565e8885764d010fc0a8 *man/print.fbroc.perf.Rd
 070f06379103939c68acb1eab0f3cbb7 *man/print.fbroc.perf.paired.Rd
 a7150e8da37d236ab23746d481db7cd6 *man/print.fbroc.roc.Rd
