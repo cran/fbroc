@@ -36,7 +36,7 @@ print.fbroc.perf <- function(x, ...) {
 #' @seealso \code{\link{boot.roc}}
 #' @export
 print.fbroc.roc <- function(x, ...) {
-  x.mem <- round(as.numeric(object.size(x))/(1024*1024),0)
+  x.mem <- round(as.numeric(object.size(x)) / (1024 * 1024), 0)
   adj <- ifelse(x$use.cache, "cached", "uncached")
   time <- ifelse(x$use.cache, "have been", "will be")
   text <- cat(paste("\n",
@@ -55,7 +55,7 @@ print.fbroc.roc <- function(x, ...) {
 #' can also be included in the plot. 
 #' @param x Object of class \code{fbroc.roc}.
 #' @param col Color used for the curve. Defaults to blue.
-#' @param fill Color used for the confidence region. Defaults to royalblue1.
+#' @param fill Color used for areas (confidence regions, AUCs and partial AUCs).
 #' @param print.plot Logical specifying whether the plot should be printed.
 #' @param show.conf Logical specifying whether the confidence region should be
 #' plotted.
@@ -66,22 +66,30 @@ print.fbroc.roc <- function(x, ...) {
 #' @param show.metric Character specifying which metric to display. See 
 #' \code{\link{perf.fbroc.roc}} for details. Defaults to \code{NULL}, which means
 #' that no metric is displayed.
+#' @param text.size.perf Size of the text display when show.metric is set to \code{TRUE}.
+#' Defaults to 6.
+#' @param show.area Whether to shade the AUC or partial AUC area. Defaults to !show.conf.
 #' @param ... further arguments passed to \code{\link{perf.fbroc.roc}}.
 #' @return A ggplot, so that the user can customize the plot further.
 #' @examples
-#' y <- rep(c(TRUE, FALSE), each = 500)
-#' x <- rnorm(1000) + y
+#' y <- rep(c(TRUE, FALSE), each = 100)
+#' x <- rnorm(200) + y
 #' result.boot <- boot.roc(x, y, n.boot = 100)
 #' plot(result.boot)
 #' plot(result.boot, show.metric = "auc")
+#' plot(result.boot, show.metric = "auc", show.conf = FALSE) # show area instead
 #' plot(result.boot, show.metric = "tpr", fpr = 0.2)
+#' plot(result.boot, show.metric = "partial.auc", fpr = c(0, 0.5),
+#'      show.partial.auc.warning = FALSE)
+#' plot(result.boot, show.metric = "partial.auc", fpr = c(0, 0.5), show.conf = FALSE,
+#'      show.partial.auc.warning = FALSE)  # show area instead
 #' @seealso \code{\link{boot.roc}}, \code{\link{perf.fbroc.roc}}
 #' @export
 plot.fbroc.roc <- function(x, col = "blue", fill = "royalblue1", print.plot = TRUE,
                            show.conf = TRUE, steps = 250, conf.level = 0.95, 
-                           show.metric = NULL, ...) {
+                           show.metric = NULL, text.size.perf = 6, 
+                           show.area = !show.conf,...) {
   if (x$tie.strategy == 2) {
-
     expand.roc <- add_roc_points(x$roc$TPR, x$roc$FPR)
     plot.frame <- data.frame(TPR = expand.roc[[1]],
                              FPR = expand.roc[[2]],
@@ -102,9 +110,9 @@ plot.fbroc.roc <- function(x, col = "blue", fill = "royalblue1", print.plot = TR
     perf.text <- paste(perf$metric ," = " , round(perf$Observed.Performance, 2)," [",
                        round(perf$CI.Performance[1], 2), ",",
                        round(perf$CI.Performance[2], 2), "]", sep = "")
-    roc.plot <- fbroc.plot.add.metric(roc.plot, show.metric, perf, col)
-    text.frame <- data.frame(text.c = perf.text, TPR = 0.5, FPR = 0.68, Segment = 1)
-    roc.plot <- roc.plot + geom_text(size = 8, aes(label = text.c), data = text.frame)
+    roc.plot <- fbroc.plot.add.metric(x, roc.plot, show.metric, show.area, perf, fill)
+    text.frame <- data.frame(text.c = perf.text, TPR = 0.25, FPR = 0.6, Segment = 1)
+    roc.plot <- roc.plot + geom_text(size = text.size.perf, aes(label = text.c), data = text.frame)
     
   }
   roc.plot <- roc.plot + geom_path(size = 1.1, col = col)
@@ -158,7 +166,7 @@ plot.fbroc.perf <- function(x, bins = NULL, col = "white",
   perf.plot <- ggplot(data = boot.frame, aes(x = Metric)) + 
                xlab(toupper(x$metric)) + ylab("Density") + 
                ggtitle("Performance histogram") +
-               geom_histogram(fill = fill, col = col, aes(, y = ..density..), 
+               geom_histogram(fill = fill, col = col, aes(y = ..density..), 
                               binwidth = bw) + theme_bw() +
                theme(title = element_text(size = 22),
                      axis.title.x = element_text(size = 18),

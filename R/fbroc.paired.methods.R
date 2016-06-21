@@ -174,9 +174,11 @@ extract.roc <- function(x, index) {
 #' @param x An object of class  \code{fbroc.paired.roc}.
 #' @inheritParams plot.fbroc.roc
 #' @param col1 Color in which the ROC curve of the first classifier is drawn.
-#' @param fill1 Fill color for the confidence region of the first ROC curve.
+#' @param fill1 Color used for areas (confidence regions, AUCs and partial AUCs) belonging
+#' to the first ROC curve.
 #' @param col2 Color in which the ROC curve of the second classifier is drawn.
-#' @param fill2 Fill color for the confidence region of the second ROC curve.
+#' @param fill2 Color used for areas (confidence regions, AUCs and partial AUCs) belonging
+#' to the second ROC curve.
 #' @param ... further arguments passed to \code{\link{perf.fbroc.paired.roc}}.
 #' @return A ggplot, so that the user can customize the plot further.
 #' @examples
@@ -185,7 +187,11 @@ extract.roc <- function(x, index) {
 #'                            roc.examples$True.Class, n.boot = 100)
 #' plot(example) # standard plot, no metric shown
 #' plot(example, show.metric = "auc") # Include information about the AUC
-#' plot(example, show.metric = "tpr", fpr = 0.2) # Highlight TPR at an FPR of 20%                          
+#' plot(example, show.metric = "auc", show.conf = FALSE) # Show area instead
+#' # Highlight TPR at an FPR of 20% 
+#' plot(example, show.metric = "tpr", fpr = 0.2)    
+#' plot(example, show.metric = "partial.auc", fpr = c(0.2, 0.4), 
+#'      show.conf = FALSE, show.partial.auc.warning = FALSE) # Show area                  
 #' @seealso \code{\link{boot.paired.roc}}
 #' @export
 plot.fbroc.paired.roc <- function(x, 
@@ -197,7 +203,9 @@ plot.fbroc.paired.roc <- function(x,
                                   show.conf = TRUE, 
                                   conf.level = 0.95, 
                                   steps = 250,
-                                  show.metric = NULL, 
+                                  show.metric = NULL,
+                                  show.area = !show.conf,
+                                  text.size.perf = 6,
                                   ...) {
   if (x$tie.strategy == 2) {
     expand.roc <- add_roc_points(x$roc1$TPR, x$roc1$FPR)
@@ -240,14 +248,15 @@ plot.fbroc.paired.roc <- function(x,
                         round(perf$CI.Performance.Difference[1], 2), ",",
                         round(perf$CI.Performance.Difference[2], 2), "]", sep = "")
     
-    roc.plot <- fbroc.plot.add.metric.paired(roc.plot, show.metric, perf, col1, col2)
+        roc.plot <- fbroc.plot.add.metric.paired(x, roc.plot, show.metric, show.area, perf, 
+                                             col1, fill1, col2, fill2)
     perf.text.vector <- paste(perf.text, perf.text2, perf.text3, sep ="\n")
     text.frame <- data.frame(text.c = perf.text.vector, 
-                             TPR = 0.55, 
-                             FPR = 0.4, 
+                             TPR = 0.25, 
+                             FPR = 0.25, 
                              Segment = 1)
     
-    roc.plot <- roc.plot + geom_text(size = 8, aes(label = text.c), data = text.frame, hjust = 0)
+    roc.plot <- roc.plot + geom_text(size = text.size.perf, aes(label = text.c), data = text.frame, hjust = 0)
     #     
   }
   roc.plot <- roc.plot + geom_path(size = 1.1, col = col1)
